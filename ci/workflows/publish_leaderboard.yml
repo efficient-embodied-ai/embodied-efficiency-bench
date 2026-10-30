@@ -1,0 +1,197 @@
+name: Publish Leaderboard & Open Website PR (InferenceX-Style Sync)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "submissions/**"
+      - "leaderboard/**"
+      - "recipes/**"
+      - "embodied_bench/leaderboard_compiler.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  compile_leaderboard:
+    name: Compile Verified Receipts (Unprivileged, Zero Secrets)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout embodied-efficiency-bench
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Verify submissions directory contains only regular two-file JSON bundles (pre-install)
+        run: |
+          python3 - << 'PY'
+          import re
+          import subprocess
+          import sys
+
+          allowed_bundle = re.compile(
+              r"^submissions/(track1_vla|track2_wm)/[A-Za-z0-9][A-Za-z0-9._-]{0,127}/(bundle_summary|submission_meta)\.json$"
+          )
+          allowed_static = {
+              "submissions/README.md",
+              "submissions/track1_vla/.gitkeep",
+              "submissions/track2_wm/.gitkeep",
+          }
+          raw = subprocess.check_output(["git", "ls-tree", "-r", "-z", "HEAD", "--", "submissions"])
+          violations = []
+          for entry in raw.split(b"\0"):
+            if not entry:
+              continue
+            meta, path_b = entry.split(b"\t", 1)
+            mode = meta.decode("ascii", errors="replace").split()[0]
+            path = path_b.decode("utf-8", errors="replace")
+            if mode != "100644":
+              violations.append(f"non-regular git mode {mode} at {path!r} (symlinks/executables/submodules forbidden)")
+              continue
+            if path in allowed_static:
+              continue
+            parts = path.split("/")
+            if any(part.startswith(".") for part in parts):
+              violations.append(f"dotfile forbidden under submissions/: {path!r}")
+              continue
+            if not allowed_bundle.fullmatch(path):
+              violations.append(f"disallowed path under submissions/: {path!r}")
+          if violations:
+            for msg in violations:
+              print(f"::error::{msg}", file=sys.stderr)
+            sys.exit(1)
+          print("Pre-install submissions tree check passed.")
+          PY
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install EmbodiedX (eeb)
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[data,dev]"
+
+      - name: Run full pytest suite & Season 1 recipe validation
+        run: |
+          pytest -q
+          python3 scripts/validate_recipes.py --recipes-dir recipes --strict
+
+      - name: Compile Verified Submissions into Leaderboard JSON & Markdown
+        run: |
+          eeb build-leaderboard \
+            --submissions-dir submissions \
+            --output leaderboard/leaderboard_v1.json \
+            --markdown-output leaderboard/LEADERBOARD.md \
+            --strict-verify
+
+      - name: Export Frontend Website Payload
+        run: |
+          eeb export-website \
+            --inputs leaderboard/leaderboard_v1.json \
+            --output leaderboard/embodiedx_leaderboard_data.json
+
+      - name: Upload Isolated leaderboard_v1.json Artifact for Privileged Deploy Job
+        uses: actions/upload-artifact@v4
+        with:
+          name: embodiedx-leaderboard-v1
+          path: leaderboard/leaderboard_v1.json
+          if-no-files-found: error
+
+      - name: Upload Compiled Leaderboard Diagnostic Bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: embodiedx-leaderboard-bundle
+          path: |
+            leaderboard/leaderboard_v1.json
+            leaderboard/embodiedx_leaderboard_data.json
+            leaderboard/LEADERBOARD.md
+
+  deploy_website:
+    name: Validate Pure JSON Artifact & Open PR to efficient-embodied-ai.github.io
+    needs: compile_leaderboard
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Download Isolated leaderboard_v1.json Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: embodiedx-leaderboard-v1
+          path: artifact_in
+
+      - name: Strictly Validate Pure JSON Schema (Zero Repo Code Executed)
+        run: |
+          python3 - << 'PY'
+          import json
+          import pathlib
+          import sys
+
+          src = pathlib.Path("artifact_in/leaderboard_v1.json")
+          if src.is_symlink() or not src.is_file():
+            sys.exit("::error::artifact_in/leaderboard_v1.json missing or is a symlink.")
+          raw = src.read_bytes()
+          if len(raw) > 10 * 1024 * 1024:
+            sys.exit("::error::leaderboard_v1.json exceeds 10 MiB safety cap.")
+          data = json.loads(raw.decode("utf-8"))
+          if not isinstance(data, dict):
+            sys.exit("::error::leaderboard_v1.json root must be a JSON object.")
+          if not isinstance(data.get("entries"), list) or not isinstance(data.get("submissions"), list):
+            sys.exit("::error::leaderboard_v1.json missing required 'entries' or 'submissions' list.")
+          if not str(data.get("schema_version", "")):
+            sys.exit("::error::leaderboard_v1.json missing schema_version.")
+          sanitized = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+          pathlib.Path("/tmp/verified_leaderboard_v1.json").write_text(sanitized, encoding="utf-8")
+          print(
+              f"Verified pure JSON leaderboard artifact: {len(data['entries'])} entries, "
+              f"{len(sanitized)} canonical bytes."
+          )
+          PY
+
+      - name: Checkout efficient-embodied-ai.github.io (if WEBSITE_DEPLOY_TOKEN is configured)
+        if: env.WEBSITE_DEPLOY_TOKEN != ''
+        env:
+          WEBSITE_DEPLOY_TOKEN: ${{ secrets.WEBSITE_DEPLOY_TOKEN }}
+        uses: actions/checkout@v4
+        with:
+          repository: efficient-embodied-ai/efficient-embodied-ai.github.io
+          token: ${{ secrets.WEBSITE_DEPLOY_TOKEN }}
+          path: website_repo
+
+      - name: Sync challenge/data/leaderboard_v1.json & Open Automated PR on Website Repo
+        if: env.WEBSITE_DEPLOY_TOKEN != ''
+        env:
+          GH_TOKEN: ${{ secrets.WEBSITE_DEPLOY_TOKEN }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${SOURCE_SHA}" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Invalid SOURCE_SHA format (${SOURCE_SHA})."
+            exit 1
+          fi
+          SHORT_SHA="${SOURCE_SHA:0:7}"
+          mkdir -p website_repo/challenge/data
+          cp -f /tmp/verified_leaderboard_v1.json website_repo/challenge/data/leaderboard_v1.json
+          cd website_repo
+          if [ -n "$(git status --porcelain)" ]; then
+            BRANCH="autoupdate/leaderboard-${SHORT_SHA}"
+            PR_TITLE="chore(leaderboard): Sync verified EmbodiedX Pareto curves (${SHORT_SHA})"
+            PR_BODY="Automated leaderboard update triggered by merge ${SOURCE_SHA} in efficient-embodied-ai/embodied-efficiency-bench."
+            git config user.name "embodiedx-bot"
+            git config user.email "embodiedx-bot@users.noreply.github.com"
+            git checkout -B "${BRANCH}"
+            git add challenge/data/leaderboard_v1.json
+            git commit -m "chore(leaderboard): sync verified EmbodiedX Pareto curves (${SHORT_SHA})"
+            git push -f -u origin -- "${BRANCH}"
+            if ! gh pr view "${BRANCH}" >/dev/null 2>&1; then
+              gh pr create \
+                --title "${PR_TITLE}" \
+                --body "${PR_BODY}" \
+                --base main \
+                --head "${BRANCH}"
+            fi
+          fi

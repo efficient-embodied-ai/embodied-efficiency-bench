@@ -1,0 +1,45 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Pytest, Ruff & Virtualenvs
+.venv/
+venv/
+.ruff_cache/
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+.DS_Store
+
+# LaTeX build intermediates (keep .tex and .pdf)
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.lof
+*.lot
+*.out
+*.synctex.gz
+*.toc
+
+# Local dataset & HuggingFace caches (preserve 7.7 MB CI mini traces)
+/data_cache/
+/data/*
+!/data/embodiedx_traces_v1_mini/
+!/data/embodiedx_traces_v1_mini/**
+/tmp/
+
+# Atomic lock & temp files
+*.lock
+.*.lock
+*.tmp
+.*.tmp

@@ -1,0 +1,34 @@
+# EmbodiedX v1.0 Single-Chip Google Cloud TPU Container (CAP_SINGLE_CHIP: num_devices == 1)
+# Supported SKUs: TPU_V6E_1_32GB (Trillium 32GB HBM2e, 1-Chip), TPU_V5E_1_16GB (16GB HBM2e, 1-Chip)
+# Default TPU runtime: Open-source TorchTPU (`torch_tpu`, device="tpu", torch.compile) + optional JAX/Flax.
+FROM us-docker.pkg.dev/cloud-tpu-images/jax-ai-image/tpu:jax0.4.35-rev1
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    TPU_VISIBLE_DEVICES=0 \
+    PJRT_DEVICE=TPU \
+    TPU_CHIPS_PER_HOST_BOUNDS=1,1,1 \
+    EEB_MAX_DEVICES=1 \
+    EEB_PERF_CAP=CAP_SINGLE_CHIP \
+    EEB_VENDOR=GOOGLE_TPU
+
+WORKDIR /workspace/embodied-efficiency-bench
+COPY pyproject.toml README.md CONTRIBUTING.md ./
+COPY eeb/ ./eeb/
+COPY embodied_bench/ ./embodied_bench/
+COPY runners/ ./runners/
+COPY recipes/ ./recipes/
+COPY leaderboard/ ./leaderboard/
+
+RUN pip install --no-cache-dir --upgrade pip pyyaml numpy torch torch_tpu && \
+    pip install --no-cache-dir -e ".[grpc,tpu]" && \
+    (id -u eeb >/dev/null 2>&1 || useradd -m -u 10001 -s /bin/bash eeb) && \
+    chown -R eeb:eeb /workspace/embodied-efficiency-bench
+
+USER eeb
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).read()"
+
+ENTRYPOINT ["python3", "-m", "runners.base_server"]
+CMD ["--model-id", "lerobot/pi05_libero_finetuned_v044", "--hardware-sku", "TPU_V6E_1_32GB", "--precision", "BF16", "--num-devices", "1", "--self-test"]

@@ -1,0 +1,443 @@
+{
+  "award_rankings": {},
+  "benchmark_suite": "EmbodiedX / embodied-efficiency-bench v1.0",
+  "canonical_model_ids": [
+    "pi05-3b",
+    "gr00t-n1.7-3b",
+    "cosmos-predict2.5-2b"
+  ],
+  "canonical_models": {
+    "cosmos-predict2.5-2b": {
+      "active_params_b": 2.0,
+      "architecture": "2B Action-Conditioned Video2World 3D DiT (256x256, 16-Frame Prediction Rollout, 1.0 s Horizon, 10 Steps, CFG=1.0, ~60 TFLOPs/prediction)",
+      "division": "CLOSED",
+      "hf_repo": "nvidia/Cosmos-Predict2.5-2B",
+      "model_id": "cosmos-predict2.5-2b",
+      "num_verified_runs": 0,
+      "osi_license": "NVIDIA-Open-Model-License",
+      "params_b": 2.0,
+      "rewarded_optimizations": [
+        "cross_frame_kv_cache_reuse",
+        "flash_attention3_3d_dit",
+        "fp8_quantization",
+        "torchtpu_torch_compile_and_pallas_fusion"
+      ],
+      "track": "WM_TRACK",
+      "verified_runs": []
+    },
+    "gr00t-n1.7-3b": {
+      "active_params_b": 3.0,
+      "architecture": "3B Dual-System Cosmos-Reason2-2B (Qwen3-VL-2B) VLM (System 2) + 16-Step DiT Flow Action Head (System 1, 2x256x256 RGB, H=16, K=8 @ 20 Hz)",
+      "division": "CLOSED",
+      "hf_repo": "nvidia/GR00T-N1.7-LIBERO",
+      "model_id": "gr00t-n1.7-3b",
+      "num_verified_runs": 0,
+      "osi_license": "Apache-2.0",
+      "params_b": 3.0,
+      "rewarded_optimizations": [
+        "dual_rate_system1_system2_async_scheduling",
+        "dit_step_distillation_16_to_2_4",
+        "vlm_prefix_kv_cache_reuse",
+        "fp8_w4_quantization"
+      ],
+      "track": "VLA_TRACK",
+      "verified_runs": []
+    },
+    "pi05-3b": {
+      "active_params_b": 3.3,
+      "architecture": "3.3B PaliGemma VLM + 300M Flow-Matching Action Expert (H=10, K=5 @ 20 Hz, 10 ODE steps default, 2x224x224 RGB; native JAX openpi and PyTorch lerobot/TorchTPU both certified)",
+      "division": "CLOSED",
+      "hf_repo": "lerobot/pi05_libero_finetuned_v044",
+      "model_id": "pi05-3b",
+      "num_verified_runs": 0,
+      "osi_license": "Apache-2.0",
+      "params_b": 3.3,
+      "rewarded_optimizations": [
+        "flow_matching_step_reduction_10_to_1_2",
+        "real_time_chunking_rtc",
+        "vlm_prefix_kv_cache_reuse",
+        "w4_fp8_quantization"
+      ],
+      "track": "VLA_TRACK",
+      "verified_runs": []
+    }
+  },
+  "cross_vendor_single_chip_skus": {
+    "AMD_MI210_64GB": {
+      "display_name": "AMD Instinct MI210 (64GB HBM2e, 1-GPU CDNA2)",
+      "fp16_tflops": 181.0,
+      "fp8_tflops": 181.0,
+      "hourly_cost_usd": 1.1,
+      "mem_bw_gbps": 1638.0,
+      "num_devices": 1,
+      "num_verified_runs": 0,
+      "perf_cap": "CAP_SINGLE_CHIP",
+      "short_label": "AMD Instinct MI210 64GB",
+      "sku_id": "AMD_MI210_64GB",
+      "tdp_watts": 300.0,
+      "vendor": "AMD_ROCM",
+      "vram_gb": 64.0
+    },
+    "AMD_W7900_48GB": {
+      "display_name": "AMD Radeon PRO W7900 (48GB GDDR6)",
+      "fp16_tflops": 123.0,
+      "fp8_tflops": 246.0,
+      "hourly_cost_usd": 0.75,
+      "mem_bw_gbps": 864.0,
+      "num_devices": 1,
+      "num_verified_runs": 0,
+      "perf_cap": "CAP_SINGLE_CHIP",
+      "short_label": "Radeon PRO W7900 48GB",
+      "sku_id": "AMD_W7900_48GB",
+      "tdp_watts": 295.0,
+      "vendor": "AMD_ROCM",
+      "vram_gb": 48.0
+    },
+    "JETSON_AGX_THOR_64GB": {
+      "display_name": "NVIDIA Jetson AGX Thor 64GB (Blackwell Robotics)",
+      "fp16_tflops": 259.0,
+      "fp8_tflops": 517.5,
+      "hourly_cost_usd": 0.85,
+      "mem_bw_gbps": 273.0,
+      "num_devices": 1,
+      "num_verified_runs": 0,
+      "perf_cap": "CAP_SINGLE_CHIP",
+      "short_label": "NVIDIA Jetson AGX Thor 64GB",
+      "sku_id": "JETSON_AGX_THOR_64GB",
+      "tdp_watts": 130.0,
+      "vendor": "NVIDIA_TEGRA",
+      "vram_gb": 64.0
+    },
+    "L40S_48GB": {
+      "display_name": "NVIDIA L40S (48GB GDDR6)",
+      "fp16_tflops": 362.05,
+      "fp8_tflops": 733.0,
+      "hourly_cost_usd": 1.15,
+      "mem_bw_gbps": 864.0,
+      "num_devices": 1,
+      "num_verified_runs": 0,
+      "perf_cap": "CAP_SINGLE_CHIP",
+      "short_label": "L40S 48GB",
+      "sku_id": "L40S_48GB",
+      "tdp_watts": 350.0,
+      "vendor": "NVIDIA",
+      "vram_gb": 48.0
+    },
+    "L4_24GB": {
+      "display_name": "NVIDIA L4 (24GB GDDR6, 72W Ada Tensor Core)",
+      "fp16_tflops": 121.0,
+      "fp8_tflops": 242.0,
+      "hourly_cost_usd": 0.71,
+      "mem_bw_gbps": 300.0,
+      "num_devices": 1,
+      "num_verified_runs": 0,
+      "perf_cap": "CAP_SINGLE_CHIP",
+      "short_label": "NVIDIA L4 24GB",
+      "sku_id": "L4_24GB",
+      "tdp_watts": 72.0,
+      "vendor": "NVIDIA",
+      "vram_gb": 24.0
+    },
+    "RTX_4090_24GB": {
+      "display_name": "NVIDIA GeForce RTX 4090 (24GB GDDR6X)",
+      "fp16_tflops": 82.6,
+      "fp8_tflops": 330.3,
+      "hourly_cost_usd": 0.69,
+      "mem_bw_gbps": 1008.0,
+      "num_devices": 1,
+      "num_verified_runs": 0,
+      "perf_cap": "CAP_SINGLE_CHIP",
+      "short_label": "RTX 4090 24GB",
+      "sku_id": "RTX_4090_24GB",
+      "tdp_watts": 450.0,
+      "vendor": "NVIDIA",
+      "vram_gb": 24.0
+    },
+    "RTX_5090_32GB": {
+      "display_name": "NVIDIA GeForce RTX 5090 (32GB GDDR7)",
+      "fp16_tflops": 209.5,
+      "fp8_tflops": 419.0,
+      "hourly_cost_usd": 0.95,
+      "mem_bw_gbps": 1792.0,
+      "num_devices": 1,
+      "num_verified_runs": 0,
+      "perf_cap": "CAP_SINGLE_CHIP",
+      "short_label": "RTX 5090 32GB",
+      "sku_id": "RTX_5090_32GB",
+      "tdp_watts": 575.0,
+      "vendor": "NVIDIA",
+      "vram_gb": 32.0
+    },
+    "TPU_V5E_1_16GB": {
+      "display_name": "Google Cloud TPU v5e-1 (16GB HBM2e, 1-Chip)",
+      "fp16_tflops": 197.0,
+      "fp8_tflops": 393.0,
+      "hourly_cost_usd": 0.6,
+      "mem_bw_gbps": 819.0,
+      "num_devices": 1,
+      "num_verified_runs": 0,
+      "perf_cap": "CAP_SINGLE_CHIP",
+      "short_label": "TPU v5e-1 16GB",
+      "sku_id": "TPU_V5E_1_16GB",
+      "tdp_watts": 120.0,
+      "vendor": "GOOGLE_TPU",
+      "vram_gb": 16.0
+    },
+    "TPU_V6E_1_32GB": {
+      "display_name": "Google Cloud TPU v6e-1 Trillium (32GB HBM2e, 1-Chip)",
+      "fp16_tflops": 918.0,
+      "fp8_tflops": 1836.0,
+      "hourly_cost_usd": 1.375,
+      "mem_bw_gbps": 1600.0,
+      "num_devices": 1,
+      "num_verified_runs": 0,
+      "perf_cap": "CAP_SINGLE_CHIP",
+      "short_label": "Google Cloud TPU v6e-1 32GB",
+      "sku_id": "TPU_V6E_1_32GB",
+      "tdp_watts": 170.0,
+      "vendor": "GOOGLE_TPU",
+      "vram_gb": 32.0
+    }
+  },
+  "cross_vendor_sku_labels": [
+    "Google Cloud TPU v6e-1 32GB",
+    "TPU v5e-1 16GB",
+    "NVIDIA Jetson AGX Thor 64GB",
+    "RTX 5090 32GB",
+    "L40S 48GB",
+    "RTX 4090 24GB",
+    "NVIDIA L4 24GB",
+    "AMD Instinct MI210 64GB",
+    "Radeon PRO W7900 48GB"
+  ],
+  "entries": [],
+  "execution_provenance_summary": {
+    "num_analytic_reference_submissions": 0,
+    "num_live_empirical_submissions": 0,
+    "provenance_banner": "FOUNDING_SEASON_OPEN_AWAITING_SUBMISSIONS"
+  },
+  "exported_at": "2026-10-30T12:14:31-07:00 (PDT)",
+  "gapless_realtime_sla": {
+    "VLA_TRACK": {
+      "description": "Gapless Real-Time Control SLA for Track 1 VLA: pi05-3b requires p99 <= 250.0 ms (>= 4.0 Chunks/s, K_eval=5); gr00t-n1.7-3b requires p99 <= 400.0 ms (>= 2.5 Chunks/s, K_eval=8).",
+      "efficiency_unit": "Actions/Joule",
+      "locked_k_eval_by_model": {
+        "gr00t-n1.7-3b": 8,
+        "pi05-3b": 5
+      },
+      "max_p99_latency_ms_by_model": {
+        "gr00t-n1.7-3b": 400.0,
+        "pi05-3b": 250.0
+      },
+      "min_control_rate_hz_by_model": {
+        "gr00t-n1.7-3b": 2.5,
+        "pi05-3b": 4.0
+      },
+      "rate_unit": "Chunks/s",
+      "throughput_unit": "Actions/s",
+      "track": "VLA_TRACK"
+    },
+    "VLA_TRACK_1A_PI05": {
+      "control_freq_hz": 20.0,
+      "description": "Gapless Real-Time Control SLA for Track 1A (pi05-3b): p99 <= 250.0 ms (>= 4.0 Chunks/s), anchored to locked K_eval=5 at 20 Hz control (5 * 50 ms = 250 ms).",
+      "efficiency_unit": "Actions/Joule",
+      "locked_k_eval": 5,
+      "max_p99_latency_ms": 250.0,
+      "min_control_rate_hz": 4.0,
+      "model_id": "pi05-3b",
+      "rate_unit": "Chunks/s",
+      "throughput_unit": "Actions/s",
+      "track": "VLA_TRACK"
+    },
+    "VLA_TRACK_1B_GR00T": {
+      "control_freq_hz": 20.0,
+      "description": "Gapless Real-Time Control SLA for Track 1B (gr00t-n1.7-3b): p99 <= 400.0 ms (>= 2.5 Chunks/s), anchored to locked K_eval=8 at 20 Hz control (8 * 50 ms = 400 ms).",
+      "efficiency_unit": "Actions/Joule",
+      "locked_k_eval": 8,
+      "max_p99_latency_ms": 400.0,
+      "min_control_rate_hz": 2.5,
+      "model_id": "gr00t-n1.7-3b",
+      "rate_unit": "Chunks/s",
+      "throughput_unit": "Actions/s",
+      "track": "VLA_TRACK"
+    },
+    "WM_TRACK": {
+      "description": "Gapless Real-Time Control SLA for Track 2 World Models (cosmos-predict2.5-2b): p99 <= 1000.0 ms (>= 1.0 Pred/s), anchored to interactive 1 Hz world-model rollouts (16 frames per prediction).",
+      "efficiency_unit": "Predictions/Joule",
+      "horizon_frames": 16,
+      "locked_k_eval": 1,
+      "max_p99_latency_ms": 1000.0,
+      "min_control_rate_hz": 1.0,
+      "model_id": "cosmos-predict2.5-2b",
+      "rate_unit": "Predictions/s",
+      "throughput_unit": "Predictions/s",
+      "track": "WM_TRACK"
+    }
+  },
+  "generated_at": "2026-10-30T12:14:31-07:00 (PDT)",
+  "num_total_submissions": 0,
+  "num_verified_submissions": 0,
+  "performance_cap_envelope": {
+    "description": "Practical Physical-AI Single-Chip Envelope (CAP_SINGLE_CHIP / SINGLE_CHIP_UNIFIED, num_devices==1, 100% Native Uncapped): Peak dense BF16/FP16 <= 1,000 TFLOPS (dense FP8/INT8 <= 2,000 TOPS), Native HBM/VRAM <= 64 GB, Peak Memory Bandwidth <= 2,000 GB/s (2.0 TB/s).",
+    "envelope_id": "CAP_SINGLE_CHIP",
+    "example_devices": [
+      "1x Google Cloud TPU v6e-1 Trillium (32GB HBM2e: 918 TFLOPS BF16 / 1,836 TOPS FP8/INT8 dense, 1,600 GB/s, 170W, $1.375/hr)",
+      "1x NVIDIA GeForce RTX 5090 32GB (209.5 TFLOPS BF16 FP32-accum / 419 TOPS FP8 dense, 32GB GDDR7, 1,792 GB/s, 575W, $0.95/hr)",
+      "1x NVIDIA Jetson AGX Thor 64GB (259 TFLOPS BF16 / 517.5 TOPS FP8 dense, 64GB LPDDR5X, 273 GB/s, 130W, $0.85/hr)",
+      "1x NVIDIA L40S 48GB (362.05 TFLOPS BF16 / 733 TOPS FP8 dense, 864 GB/s, 350W, $1.15/hr) / RTX 4090 24GB (82.6 TFLOPS BF16 FP32-accum / 330.3 TOPS FP8 dense, 1,008 GB/s, 450W, $0.69/hr)",
+      "1x NVIDIA L4 24GB (121 TFLOPS BF16 / 242 TOPS FP8 dense, 24GB GDDR6, 300 GB/s, 72W, $0.71/hr)",
+      "1x NVIDIA Jetson Orin NX 16GB (23 TFLOPS FP16 / 47 TOPS INT8 dense, 16GB LPDDR5, 102.4 GB/s, 25W, $0.25/hr)",
+      "Any Single-Chip GPU/TPU/NPU/ASIC natively within <=1,000 dense BF16 TFLOPS / <=2,000 FP8/INT8 TOPS, <=64GB HBM/VRAM, <=2,000 GB/s"
+    ],
+    "max_bf16_tflops": 1000.0,
+    "max_bw_gbps": 2000.0,
+    "max_fp16_tflops": 1000.0,
+    "max_fp8_int8_tops": 2000.0,
+    "max_hbm_gb": 64.0,
+    "max_int8_fp8_tops": 2000.0,
+    "max_mem_bw_gbps": 2000.0,
+    "max_num_devices": 1,
+    "max_tflops": 1000.0,
+    "max_vram_gb": 64.0,
+    "tier_alias": "SINGLE_CHIP_UNIFIED",
+    "typical_power_watts": 575.0
+  },
+  "schema_version": "1.0.0",
+  "season1_official_hardware_targets": {
+    "GOOGLE_CLOUD_TPU": "TPU_V6E_1_32GB",
+    "NVIDIA_GPU": "L40S_48GB"
+  },
+  "site": "efficient-embodied-ai.github.io",
+  "submission_protocol": {
+    "canonical_concurrency_grid": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "mode": "TWO_PHASE_COMMIT_REVEAL",
+    "phase1_contest_pr": {
+      "commitment_definition": "SHA256(canonical_reveal_manifest.json) pinning OCI image @sha256 digest, HF checkpoint shard SHA-256s, lockfile SHA-256, exact server/client CLI flags, and Phase-1 attestation_sha256",
+      "commitment_field": "recipe_commit_sha256",
+      "exposes_kernel_source_or_flags": false,
+      "required_files": [
+        "bundle_summary.json",
+        "submission_meta.json"
+      ]
+    },
+    "phase2_snapshot_reveal": {
+      "evaluation_split": "private_organizer_held_out_traces",
+      "fraud_disqualification_tolerance_pct": 8.0,
+      "max_finalists_per_lab_per_track_division": 1,
+      "open_winner_badge": "VERIFIED_OPEN_RECIPE",
+      "ranking_authority": "PHASE2_ORGANIZER_CLEAN_HARDWARE_SCORE",
+      "reproducibility_tolerance_pct": 8.0,
+      "rolling_proprietary_badge": "PROPRIETARY_AUDIT_ONLY",
+      "window_after_snapshot_hours": 24
+    },
+    "season1_official_hardware_targets": {
+      "GOOGLE_CLOUD_TPU": "TPU_V6E_1_32GB",
+      "NVIDIA_GPU": "L40S_48GB"
+    },
+    "season1_schedule": {
+      "checkpoint1_live_spotlight_freeze": "2026-11-10T23:59:00Z",
+      "checkpoint2_season1_awards_freeze": "2026-12-18T23:59:00-12:00",
+      "continuous_rolling_leaderboard": "2027+",
+      "corl_workshop_live_showcase": "2026-11-12",
+      "public_launch": "2026-10-30"
+    },
+    "submission_folder_convention": "submissions/<track>/<team>_<sku>_<engine>_<date>/"
+  },
+  "submissions": [],
+  "tracks": {
+    "VLA_TRACK": {
+      "global_pareto_frontier": [],
+      "num_verified_submissions": 0,
+      "semianalysis_4way_global_pareto_frontiers": {
+        "iso_compute_and_bw_efficiency": [],
+        "power_efficiency_per_watt": [],
+        "raw_per_chip_throughput": [],
+        "tco_efficiency_per_dollar": []
+      },
+      "submissions": [],
+      "title": "Track 1: Real-Time VLA Policy Track (pi0.5-3B [1A] & GR00T-N1.7-3B [1B], Closed Division)",
+      "track_id": "VLA_TRACK",
+      "x_axis_label": "p99 Chunk Rate (Chunks/s) [1000 / L_p99, ms]",
+      "x_key": "hz_react",
+      "y_axis_frontiers": {
+        "power_efficiency_per_watt": [],
+        "raw_per_chip_throughput": [],
+        "throughput_per_100_tops": [],
+        "throughput_per_dollar_hr": []
+      },
+      "y_key": "actions_per_sec"
+    },
+    "WM_TRACK": {
+      "global_pareto_frontier": [],
+      "num_verified_submissions": 0,
+      "semianalysis_4way_global_pareto_frontiers": {
+        "iso_compute_and_bw_efficiency": [],
+        "power_efficiency_per_watt": [],
+        "raw_per_chip_throughput": [],
+        "tco_efficiency_per_dollar": []
+      },
+      "submissions": [],
+      "title": "Track 2: Action-Conditioned World Model Track (Cosmos-Predict2.5-2B, Closed Division)",
+      "track_id": "WM_TRACK",
+      "x_axis_label": "p99 Rollout Rate (Rollouts/s | 16x = Stream FPS)",
+      "x_key": "hz_plan",
+      "y_axis_frontiers": {
+        "power_efficiency_per_watt": [],
+        "raw_per_chip_throughput": [],
+        "throughput_per_100_tops": [],
+        "throughput_per_dollar_hr": []
+      },
+      "y_key": "predictions_per_sec"
+    }
+  },
+  "y_axis_keys": [
+    "raw_per_chip_throughput",
+    "power_efficiency_per_watt",
+    "throughput_per_100_tops",
+    "throughput_per_dollar_hr"
+  ],
+  "y_axis_normalizations": {
+    "power_efficiency_per_watt": {
+      "description": "Throughput divided by measured active device power watts (zero synthetic host/system overhead).",
+      "key": "power_efficiency_per_watt",
+      "label": "Power Efficiency / Perf-per-Watt (Actions/J or Pred/J)",
+      "vla_global_frontier": [],
+      "vla_unit": "Actions/Joule (Actions/s/W)",
+      "wm_global_frontier": [],
+      "wm_unit": "Predictions/Joule (Pred/s/W)"
+    },
+    "raw_per_chip_throughput": {
+      "description": "Raw single-chip throughput at 100% native uncapped single-device execution (num_devices == 1).",
+      "key": "raw_per_chip_throughput",
+      "label": "Raw Per-Chip Throughput (Actions/s/chip or Pred/s/chip)",
+      "vla_global_frontier": [],
+      "vla_unit": "Actions/sec/chip",
+      "wm_global_frontier": [],
+      "wm_unit": "Predictions/sec/chip (16-Frame Rollouts/s)"
+    },
+    "throughput_per_100_tops": {
+      "description": "Hardware-normalized architectural utilization: Throughput / (Dense_BF16_TFLOPS / 100), plus TB/s BW auxiliary efficiency.",
+      "key": "throughput_per_100_tops",
+      "label": "Iso-Compute Efficiency (Throughput per 100 Dense BF16 TFLOPS)",
+      "vla_global_frontier": [],
+      "vla_unit": "Actions/s per 100 Dense BF16 TFLOPS",
+      "wm_global_frontier": [],
+      "wm_unit": "Predictions/s per 100 Dense BF16 TFLOPS"
+    },
+    "throughput_per_dollar_hr": {
+      "description": "Hourly-rate cost-normalized throughput: Throughput / Reference_Hourly_Cost_USD in (Output/s)/($/hr).",
+      "key": "throughput_per_dollar_hr",
+      "label": "TCO Efficiency (Perf per $/hr Cloud/Edge Rate)",
+      "vla_global_frontier": [],
+      "vla_unit": "(Actions/s)/($/hr)",
+      "wm_global_frontier": [],
+      "wm_unit": "(Predictions/s)/($/hr)"
+    }
+  }
+}

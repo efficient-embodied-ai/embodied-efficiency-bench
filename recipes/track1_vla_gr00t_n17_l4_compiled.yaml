@@ -1,0 +1,52 @@
+# EEB v1.0 Closed Division Recipe
+# Model: gr00t-n1.7-3b | Hardware SKU: L4_24GB | Division: CLOSED (Compiled BF16)
+recipe_id: track1_vla_gr00t_n17_l4_compiled
+track: VLA_TRACK
+division: CLOSED
+scenario: P1_ONBOARD
+power_class: E3
+perf_cap: CAP_SINGLE_CHIP
+perf_cap_mode: native_qualifying_device
+num_devices: 1
+model_name: gr00t-n1.7-3b-l4-bf16-compiled-closed
+model_family: gr00t-n1.7
+baseline_model_id: gr00t-n1.7-3b
+hf_repo_id: nvidia/GR00T-N1.7-LIBERO
+hf_revision: 2ea293aa20ba7cf5bbf3ba17a5fbcb1a01cbfe21
+hf_subdir: libero_10
+hardware_sku: L4_24GB
+precision: bf16
+denoising_steps: 16
+reference_denoising_steps: 16
+native_action_chunk_size: 16
+execute_horizon: 8
+concurrency_levels:
+- 1
+- 2
+- 4
+- 8
+- 16
+warmup_calls: 20
+timed_calls: 320
+optimizations:
+- cuda_torch_compile
+- sdpa_flash_attention
+- static_bucket_microbatching
+compression_tier: strict_lossless
+speedup_factor_hint: 1.6
+quality_noise_scale: 0.004
+weights_frozen: true
+resolution_hw: 256
+reference_resolution_hw: 256
+num_cameras: 2
+reference_num_cameras: 2
+execution_strategy: ASYNC_CHUNK
+chunk_horizon_s: 0.4
+slo_preset: 20Hz_50ms
+notes: EEB v1.0 Closed Division pure BF16 Compiled recipe for gr00t-n1.7-3b
+  (nvidia/GR00T-N1.7-LIBERO/libero_10, horizon=16, locked execute_horizon=8 at 20 Hz,
+  2x256x256 RGB, 16 DiT steps, static batch buckets + modular torch.compile) on single-chip NVIDIA L4_24GB (72W TDP).
+action_chunk_sizes:
+- 8
+control_freq_hz: 20.0
+declared_inference_flops_gflops: 1760.0

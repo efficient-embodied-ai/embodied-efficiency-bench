@@ -1,0 +1,26 @@
+# Reference Jetson Orin NX 16GB Container (JetPack 6.1 / L4T R36.4.0, aarch64)
+FROM nvcr.io/nvidia/l4t-pytorch:r36.4.0-pth2.5-py3
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    EEB_POWER_MODE="25W_NVPMODEL"
+
+WORKDIR /workspace/embodied-efficiency-bench
+COPY pyproject.toml README.md ./
+COPY eeb/ ./eeb/
+COPY embodied_bench/ ./embodied_bench/
+COPY runners/ ./runners/
+COPY recipes/ ./recipes/
+COPY leaderboard/ ./leaderboard/
+
+RUN pip install --no-cache-dir --upgrade pip pyyaml numpy && \
+    pip install --no-cache-dir -e . && \
+    (id -u eeb >/dev/null 2>&1 || useradd -m -u 10001 -s /bin/bash eeb) && \
+    chown -R eeb:eeb /workspace/embodied-efficiency-bench
+
+USER eeb
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python3 -c "import eeb, embodied_bench; assert eeb.__file__ and embodied_bench.__file__"
+
+ENTRYPOINT ["python3", "-m", "embodied_bench.cli"]
+CMD ["measure", "--recipe", "recipes/track1_vla_pi05_orin_nx.yaml", "--output", "/tmp/orin_nx_receipt.json"]

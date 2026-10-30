@@ -1,0 +1,206 @@
+name: EmbodiedX Submission & Preflight CI
+
+on:
+  pull_request:
+    branches: [ main, master ]
+  push:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+
+jobs:
+  preflight-and-validate:
+    name: Run Pre-Install PR Guard, Unit Tests, Recipe Validation, Submission Preflight & Website Export
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Enforce pre-install symlink, dotfile, and Phase-1 PR file boundary guard
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REPO: ${{ github.repository }}
+          AUTHOR_ASSOCIATION: ${{ github.event.pull_request.author_association }}
+        run: |
+          set -euo pipefail
+          if [[ "${EVENT_NAME}" == "pull_request" ]] && [[ -n "${BASE_REF}" ]]; then
+            if [[ ! "${BASE_REF}" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "${BASE_REF}" == -* ]] || [[ "${BASE_REF}" == *".."* ]]; then
+              echo "::error::Unsafe BASE_REF detected (${BASE_REF}); aborting git fetch/diff."
+              exit 1
+            fi
+            git fetch --no-tags --depth=50 origin -- "${BASE_REF}"
+          fi
+          python3 - << 'PY'
+          import os
+          import re
+          import subprocess
+          import sys
+
+          allowed_bundle = re.compile(
+              r"^submissions/(track1_vla|track2_wm)/[A-Za-z0-9][A-Za-z0-9._-]{0,127}/(bundle_summary|submission_meta)\.json$"
+          )
+          allowed_static = {
+              "submissions/README.md",
+              "submissions/track1_vla/.gitkeep",
+              "submissions/track2_wm/.gitkeep",
+          }
+
+          # 1. Always audit git tree modes under submissions/ (block symlinks 120000, submodules 160000, dotfiles, non-JSON).
+          raw_tree = subprocess.check_output(["git", "ls-tree", "-r", "-z", "HEAD", "--", "submissions"])
+          violations = []
+          for entry in raw_tree.split(b"\0"):
+            if not entry:
+              continue
+            meta, path_b = entry.split(b"\t", 1)
+            mode = meta.decode("ascii", errors="replace").split()[0]
+            path = path_b.decode("utf-8", errors="replace")
+            if mode != "100644":
+              violations.append(f"Non-regular file mode {mode} forbidden at {path!r} (symlinks/executables/submodules banned).")
+              continue
+            if path in allowed_static:
+              continue
+            if any(part.startswith(".") for part in path.split("/")):
+              violations.append(f"Dotfile forbidden under submissions/: {path!r}")
+              continue
+            if not allowed_bundle.fullmatch(path):
+              violations.append(f"Disallowed file under submissions/: {path!r}")
+
+          # 2. On pull_request, run git diff --name-status BEFORE pip install -e executes any repo code.
+          event_name = os.environ.get("EVENT_NAME", "")
+          base_ref = os.environ.get("BASE_REF", "")
+          if event_name == "pull_request" and base_ref:
+            diff_raw = subprocess.check_output(
+                ["git", "diff", "--name-status", "-z", f"origin/{base_ref}...HEAD"]
+            )
+            tokens = [t.decode("utf-8", errors="replace") for t in diff_raw.split(b"\0") if t]
+            changed = []
+            idx = 0
+            while idx < len(tokens):
+              status = tokens[idx]
+              idx += 1
+              if status.startswith(("R", "C")) and idx + 1 < len(tokens):
+                changed.append((status, tokens[idx]))
+                changed.append((status, tokens[idx + 1]))
+                idx += 2
+              elif idx < len(tokens):
+                changed.append((status, tokens[idx]))
+                idx += 1
+
+            is_fork = (
+                bool(os.environ.get("HEAD_REPO"))
+                and os.environ.get("HEAD_REPO") != os.environ.get("BASE_REPO")
+            )
+            is_trusted_maintainer = (
+                not is_fork
+                and os.environ.get("AUTHOR_ASSOCIATION", "") in {"OWNER", "MEMBER", "COLLABORATOR"}
+            )
+            touches_submission_tracks = any(
+                p.startswith(("submissions/track1_vla/", "submissions/track2_wm/"))
+                and not p.endswith("/.gitkeep")
+                for _, p in changed
+            )
+
+            if touches_submission_tracks or not is_trusted_maintainer:
+              if not changed:
+                violations.append("External pull request contains zero changed files.")
+              for status, path in changed:
+                if status not in ("A", "M"):
+                  violations.append(
+                      f"Submission PR may only add/modify two-file JSON bundles (got git status {status!r} on {path!r})."
+                  )
+                if not allowed_bundle.fullmatch(path):
+                  violations.append(
+                      f"Submission / external PR touched disallowed path {path!r}; only "
+                      "submissions/(track1_vla|track2_wm)/<entry_id>/{bundle_summary.json,submission_meta.json} is allowed."
+                  )
+
+          if violations:
+            for msg in violations:
+              print(f"::error::{msg}", file=sys.stderr)
+            sys.exit(1)
+          print("Pre-install PR boundary, symlink, and dotfile checks passed.")
+          PY
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install EmbodiedX dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[data,dev]"
+
+      - name: Run full pytest suite
+        run: |
+          pytest -q
+
+      - name: Validate canonical Season 1 recipes
+        run: |
+          python3 scripts/validate_recipes.py --recipes-dir recipes --strict
+
+      - name: Validate measured participant submissions under submissions/track1_vla and submissions/track2_wm
+        run: |
+          found_bundles=0
+          while IFS= read -r -d '' sub_file; do
+            sub_dir="$(dirname "${sub_file}")"
+            echo "Validating participant bundle: ${sub_dir}"
+            eeb validate-submission --submission "${sub_dir}"
+            eeb verify-bundle "${sub_dir}" --strict
+            found_bundles=$((found_bundles + 1))
+          done < <(find submissions/track1_vla submissions/track2_wm -type f \( -name "receipt.json" -o -name "submission_receipt.json" -o -name "bundle_summary.json" \) -print0 2>/dev/null | sort -z)
+          echo "Validated ${found_bundles} measured submission bundle(s)."
+
+      - name: Run synthetic CPU smoke sweep on Official Season 1 L40S and TPU v6e-1 recipes
+        run: |
+          for recipe_path in recipes/track1_vla_pi05_tpu_v6e.yaml recipes/track1_vla_gr00t_n17_l40s.yaml; do
+            echo "Running synthetic CPU smoke sweep on recipe: ${recipe_path}"
+            out_dir="/tmp/ci_smoke_$(basename "${recipe_path}" .yaml)"
+            h_arg='{"horizon": 10, "execute_horizon": 5, "compute_delay_ms": 0.1}'
+            if [[ "${recipe_path}" == *"gr00t"* ]]; then
+              h_arg='{"horizon": 16, "execute_horizon": 8, "action_dim": 16, "compute_delay_ms": 0.1}'
+            fi
+            eeb measure \
+              --recipe "${recipe_path}" \
+              --endpoint inproc:eeb.servers.dummy:DummyVLAPolicy \
+              --policy-kwargs "${h_arg}" \
+              --sweep 1,2 \
+              --warmup 2 \
+              --calls 8 \
+              --runs 1 \
+              --allow-no-device \
+              --allow-sanity-only \
+              --out "${out_dir}"
+            eeb verify-receipt --submission "${out_dir}"
+          done
+
+      - name: Compile verified leaderboard and enforce PR bundle gate when track directories change
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          eeb build-leaderboard \
+            --submissions-dir submissions \
+            --output /tmp/leaderboard_v1.json \
+            --markdown-output /tmp/LEADERBOARD.md \
+            --strict-verify
+          eeb export-website \
+            --inputs /tmp/leaderboard_v1.json \
+            --output /tmp/embodiedx_leaderboard_data.json
+          if [[ "${EVENT_NAME}" == "pull_request" ]] && [[ -n "${BASE_REF}" ]]; then
+            if [[ ! "${BASE_REF}" =~ ^[A-Za-z0-9._/-]+$ ]] || [[ "${BASE_REF}" == -* ]] || [[ "${BASE_REF}" == *".."* ]]; then
+              echo "::error::Unsafe BASE_REF detected (${BASE_REF}); aborting git fetch/diff."
+              exit 1
+            fi
+            changed_track_files="$(git diff --name-only "origin/${BASE_REF}...HEAD" -- submissions/track1_vla submissions/track2_wm | grep -v '\.gitkeep$' || true)"
+            if [[ -n "${changed_track_files}" ]]; then
+              python3 -c 'import json, sys; data = json.load(open("/tmp/leaderboard_v1.json", encoding="utf-8")); sys.exit(0 if int(data.get("num_verified_submissions", 0)) >= 1 else "Submission PR modified submissions/track* but produced 0 CERTIFIED bundles in leaderboard_v1.json.")'
+            fi
+          fi

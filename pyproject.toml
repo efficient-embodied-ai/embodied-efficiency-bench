@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "embodied-efficiency-bench"
+version = "1.0.0"
+description = "EmbodiedX / embodied-efficiency-bench v1.0: Two-Clock Efficiency, LIBERO-RT & MLPerf-Style Compliance Benchmark for World Models and VLA Policies (CoRL 2026 EEAI Workshop)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "Apache-2.0"}
+authors = [
+  {name = "Jiafan Yu, Ouais Alsharif, Changliu Liu, Dhruv Shah, Jiajun Wu, Zhuoyang Zhang (CoRL 2026 EEAI Organizers)"}
+]
+dependencies = [
+  "numpy>=1.24.0",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+grpc = ["grpcio>=1.60.0", "protobuf>=4.25.0"]
+server = [
+  "grpcio>=1.60.0",
+  "protobuf>=4.25.0",
+  "torch>=2.4.0",
+  "torchvision>=0.19.0",
+  "transformers>=4.48.0",
+  "diffusers>=0.33.0",
+  "accelerate>=0.33.0",
+  "safetensors>=0.4.3",
+  "huggingface_hub>=0.23.0",
+  "Pillow>=10.0.0",
+]
+data = ["pyarrow>=14.0.0", "huggingface_hub>=0.23.0", "Pillow>=10.0.0", "imageio-ffmpeg>=0.5.0"]
+vla = [
+  "lerobot>=0.4.4",
+  "transformers>=4.48.0",
+  "accelerate>=0.33.0",
+  "safetensors>=0.4.3",
+  "huggingface_hub>=0.23.0",
+  "pyarrow>=14.0.0",
+  "Pillow>=10.0.0",
+]
+gpu = [
+  "torch>=2.4.0",
+  "torchvision>=0.19.0",
+  "transformers>=4.48.0",
+  "diffusers>=0.33.0",
+  "accelerate>=0.33.0",
+  "safetensors>=0.4.3",
+  "nvidia-ml-py>=12.535.0",
+]
+cuda = [
+  "torch>=2.4.0",
+  "torchvision>=0.19.0",
+  "transformers>=4.48.0",
+  "diffusers>=0.33.0",
+  "accelerate>=0.33.0",
+  "safetensors>=0.4.3",
+  "nvidia-ml-py>=12.535.0",
+]
+tpu = [
+  "jax>=0.4.35",
+  "flax>=0.10.0",
+  "transformers>=4.48.0",
+  "safetensors>=0.4.3",
+  "huggingface_hub>=0.23.0",
+  "Pillow>=10.0.0",
+  "tpu-info>=0.2.0",
+]
+pi05 = ["lerobot>=0.4.4", "transformers>=4.48.0", "safetensors>=0.4.3", "Pillow>=10.0.0"]
+gr00t = ["transformers>=4.48.0", "accelerate>=0.33.0", "safetensors>=0.4.3", "Pillow>=10.0.0"]
+cosmos = ["diffusers>=0.33.0", "transformers>=4.48.0", "accelerate>=0.33.0", "safetensors>=0.4.3", "Pillow>=10.0.0", "imageio-ffmpeg>=0.5.0"]
+sim = ["libero>=0.1.0", "robosuite>=1.4.0", "mujoco>=3.1.0", "imageio>=2.34.0"]
+dev = ["pytest>=8.0.0", "ruff>=0.4.0"]
+
+[project.scripts]
+embodied-bench = "embodied_bench.cli:main"
+eeb = "eeb.cli:main"
+
+[project.urls]
+Homepage = "https://efficient-embodied-ai.github.io/challenge/"
+Repository = "https://github.com/efficient-embodied-ai/embodied-efficiency-bench"
+
+[tool.setuptools.packages.find]
+include = ["eeb*", "embodied_bench*", "leaderboard*", "runners*"]
+exclude = ["tests*", "runs*", "submissions*", "data*", "data_cache*"]
+
+[tool.setuptools.package-data]
+"eeb.protocol" = ["*.proto", "*.pyi"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+

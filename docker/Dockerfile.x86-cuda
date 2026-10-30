@@ -1,0 +1,25 @@
+# Reference x86_64 CUDA Container (Any Desktop/Cloud GPU for Local Dev & Fleet Track)
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /workspace/embodied-efficiency-bench
+COPY pyproject.toml README.md ./
+COPY eeb/ ./eeb/
+COPY embodied_bench/ ./embodied_bench/
+COPY runners/ ./runners/
+COPY recipes/ ./recipes/
+COPY leaderboard/ ./leaderboard/
+
+RUN pip install --no-cache-dir --upgrade pip pyyaml numpy && \
+    pip install --no-cache-dir -e . && \
+    (id -u eeb >/dev/null 2>&1 || useradd -m -u 10001 -s /bin/bash eeb) && \
+    chown -R eeb:eeb /workspace/embodied-efficiency-bench
+
+USER eeb
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python3 -c "import eeb, embodied_bench; assert eeb.__file__ and embodied_bench.__file__"
+
+ENTRYPOINT ["python3", "-m", "embodied_bench.cli"]
+CMD ["run-stage1", "--recipe", "recipes/track2_wm_cosmos2b_workstation350t.yaml", "--output", "/tmp/stage1_receipt.json"]

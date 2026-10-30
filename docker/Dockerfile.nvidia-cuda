@@ -1,0 +1,32 @@
+# EmbodiedX v1.0 Single-Chip NVIDIA CUDA Container (CAP_SINGLE_CHIP: num_devices == 1)
+# Supported SKUs: JETSON_AGX_THOR_64GB, RTX_5090_32GB, L40S_48GB, RTX_4090_24GB, JETSON_ORIN_AGX_64GB, JETSON_ORIN_NX_16GB
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    CUDA_VISIBLE_DEVICES=0 \
+    NVIDIA_VISIBLE_DEVICES=0 \
+    EEB_MAX_DEVICES=1 \
+    EEB_PERF_CAP=CAP_SINGLE_CHIP \
+    EEB_VENDOR=NVIDIA
+
+WORKDIR /workspace/embodied-efficiency-bench
+COPY pyproject.toml README.md CONTRIBUTING.md ./
+COPY eeb/ ./eeb/
+COPY embodied_bench/ ./embodied_bench/
+COPY runners/ ./runners/
+COPY recipes/ ./recipes/
+COPY leaderboard/ ./leaderboard/
+
+RUN pip install --no-cache-dir --upgrade pip pyyaml numpy && \
+    pip install --no-cache-dir -e ".[cuda]" && \
+    (id -u eeb >/dev/null 2>&1 || useradd -m -u 10001 -s /bin/bash eeb) && \
+    chown -R eeb:eeb /workspace/embodied-efficiency-bench
+
+USER eeb
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).read()"
+
+ENTRYPOINT ["python3", "-m", "runners.base_server"]
+CMD ["--model-id", "nvidia/GR00T-N1.7-LIBERO", "--hardware-sku", "RTX_5090_32GB", "--precision", "BF16", "--num-devices", "1", "--self-test"]

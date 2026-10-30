@@ -1,0 +1,17 @@
+# EmbodiedX container build exclusions
+.git
+.github
+.venv*
+venv*
+__pycache__
+*.py[cod]
+.pytest_cache
+.mypy_cache
+.ruff_cache
+data_cache
+runs
+submissions
+.env*
+*.pem
+*.key
+scratch

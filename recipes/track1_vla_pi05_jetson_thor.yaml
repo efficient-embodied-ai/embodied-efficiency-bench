@@ -1,0 +1,47 @@
+# EEB v1.0 Closed Division Recipe
+# Model: pi05-3b | Hardware SKU: JETSON_AGX_THOR_64GB | Division: CLOSED
+recipe_id: track1_vla_pi05_jetson_thor
+track: VLA_TRACK
+division: CLOSED
+scenario: P1_ONBOARD
+power_class: E3
+perf_cap: CAP_SINGLE_CHIP
+perf_cap_mode: native_qualifying_device
+model_name: pi05-3b-jetson_thor-bf16-closed
+model_family: pi05
+baseline_model_id: pi05-3b
+hf_repo_id: lerobot/pi05_libero_finetuned_v044
+hf_revision: 7152f13e34c6c115d808aea0e5d08aca74eac14b
+hardware_sku: JETSON_AGX_THOR_64GB
+precision: bf16
+denoising_steps: 10
+reference_denoising_steps: 10
+native_action_chunk_size: 10
+concurrency_levels:
+- 1
+- 2
+- 4
+- 8
+- 16
+execute_horizon: 5
+optimizations:
+- vlm_prefix_kv_cache_reuse
+- torch_compile_inductor
+- cuda_graph_static_capture
+compression_tier: strict_lossless
+speedup_factor_hint: 1.6
+quality_noise_scale: 0.005
+weights_frozen: true
+resolution_hw: 224
+reference_resolution_hw: 224
+num_cameras: 2
+reference_num_cameras: 2
+execution_strategy: ASYNC_CHUNK
+chunk_horizon_s: 0.25
+slo_preset: 20Hz_50ms
+notes: EEB v1.0 Closed Division baseline recipe for pi05-3b (LIBERO H=10, locked execute_horizon=5 at 20
+  Hz, 224x224, BF16) on single-chip JETSON_AGX_THOR_64GB.
+action_chunk_sizes:
+- 5
+control_freq_hz: 20.0
+declared_inference_flops_gflops: 1760.0

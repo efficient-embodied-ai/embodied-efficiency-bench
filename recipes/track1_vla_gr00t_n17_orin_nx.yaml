@@ -1,0 +1,48 @@
+# EEB v1.0 Closed Division Recipe
+# Model: gr00t-n1.7-3b | Hardware SKU: JETSON_ORIN_NX_16GB | Division: CLOSED
+recipe_id: track1_vla_gr00t_n17_orin_nx
+track: VLA_TRACK
+division: CLOSED
+scenario: P1_ONBOARD
+power_class: E1
+perf_cap: CAP_EDGE_100T
+perf_cap_mode: native_qualifying_device
+model_name: gr00t-n1.7-3b-orin_nx-int8-closed
+model_family: gr00t-n1.7
+baseline_model_id: gr00t-n1.7-3b
+hf_repo_id: nvidia/GR00T-N1.7-LIBERO
+hf_revision: 2ea293aa20ba7cf5bbf3ba17a5fbcb1a01cbfe21
+hf_subdir: libero_10
+hardware_sku: JETSON_ORIN_NX_16GB
+precision: int8
+denoising_steps: 16
+reference_denoising_steps: 16
+native_action_chunk_size: 16
+concurrency_levels:
+- 1
+- 2
+- 4
+- 8
+- 16
+execute_horizon: 8
+optimizations:
+- vlm_prefix_kv_cache_reuse
+- int8_weight_only_quantization
+- cuda_graph_static_capture
+compression_tier: strict_lossless
+speedup_factor_hint: 1.6
+quality_noise_scale: 0.006
+weights_frozen: true
+resolution_hw: 256
+reference_resolution_hw: 256
+num_cameras: 2
+reference_num_cameras: 2
+execution_strategy: ASYNC_CHUNK
+chunk_horizon_s: 0.4
+slo_preset: 20Hz_50ms
+notes: EEB v1.0 Closed Division recipe for nvidia/GR00T-N1.7-LIBERO (Cosmos-Reason2-2B
+  VLM + 16-step DiT, H=16, locked execute_horizon=8 at 20 Hz, 256x256) on single-chip JETSON_ORIN_NX_16GB.
+action_chunk_sizes:
+- 8
+control_freq_hz: 20.0
+declared_inference_flops_gflops: 1760.0

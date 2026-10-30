@@ -1,0 +1,52 @@
+# EEB v1.0 Closed Division Recipe
+# Model: cosmos-predict2.5-2b | Hardware SKU: RTX_5090_32GB | Division: CLOSED
+recipe_id: track2_wm_cosmos_predict25_rtx5090
+track: WM_TRACK
+division: CLOSED
+scenario: S1_INTERACTIVE_WM
+power_class: E_OPEN
+perf_cap: CAP_SINGLE_CHIP
+perf_cap_mode: native_qualifying_device
+model_name: cosmos-predict2.5-2b-rtx5090-bf16-closed
+model_family: Cosmos-Predict2.5-2B
+baseline_model_id: cosmos-predict2.5-2b
+hf_repo_id: nvidia/Cosmos-Predict2.5-2B
+hf_revision: 85f8ae7bfe8f5525c8d103429524dcf12f98bf7b
+hf_subdir: robot/action-cond
+hardware_sku: RTX_5090_32GB
+precision: bf16
+denoising_steps: 10
+reference_denoising_steps: 10
+horizon_frames: 16
+batch_sizes:
+- 1
+- 2
+- 4
+- 8
+- 16
+concurrency_levels:
+- 1
+- 2
+- 4
+- 8
+- 16
+optimizations:
+- cross_frame_kv_cache_reuse
+- torch_compile_inductor
+- cuda_graph_static_capture
+compression_tier: strict_lossless
+speedup_factor_hint: 1.6
+quality_noise_scale: 0.005
+weights_frozen: true
+resolution_hw: 256
+reference_resolution_hw: 256
+num_cameras: 2
+reference_num_cameras: 2
+execution_strategy: ASYNC_CHUNK
+chunk_horizon_s: 1.0
+wm_fps_target: 24fps
+notes: EEB v1.0 Closed Division recipe for cosmos-predict2.5-2b (256x256, 16 frames
+  at 24 FPS, 10 steps, CFG=1.0, ~60 TFLOPs/rollout) on single-chip RTX_5090_32GB.
+control_freq_hz: 24.0
+guidance_scale: 1.0
+declared_inference_flops_gflops: 60000.0

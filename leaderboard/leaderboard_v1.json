@@ -1,0 +1,159 @@
+{
+  "award_rankings": {},
+  "benchmark_suite": "EmbodiedX / embodied-efficiency-bench v1.0 (CoRL 2026 Efficient Foundation Models for Real-Time Embodied AI)",
+  "by_track_model_division": {},
+  "canonical_models": [
+    "pi05-3b",
+    "gr00t-n1.7-3b",
+    "cosmos-predict2.5-2b"
+  ],
+  "cross_chip_by_model": {},
+  "entries": [],
+  "execution_provenance_summary": {
+    "num_analytic_reference_submissions": 0,
+    "num_live_empirical_submissions": 0,
+    "provenance_banner": "FOUNDING_SEASON_OPEN_AWAITING_SUBMISSIONS (0 PRE-POPULATED BASELINES; READY FOR PHASE-1 CONTESTANT SUBMISSIONS)"
+  },
+  "gapless_realtime_sla": {
+    "VLA_TRACK": {
+      "description": "Gapless Real-Time Control SLA for Track 1 VLA: pi05-3b requires p99 <= 250.0 ms (>= 4.0 Chunks/s, K_eval=5); gr00t-n1.7-3b requires p99 <= 400.0 ms (>= 2.5 Chunks/s, K_eval=8).",
+      "efficiency_unit": "Actions/Joule",
+      "locked_k_eval_by_model": {
+        "gr00t-n1.7-3b": 8,
+        "pi05-3b": 5
+      },
+      "max_p99_latency_ms_by_model": {
+        "gr00t-n1.7-3b": 400.0,
+        "pi05-3b": 250.0
+      },
+      "min_control_rate_hz_by_model": {
+        "gr00t-n1.7-3b": 2.5,
+        "pi05-3b": 4.0
+      },
+      "rate_unit": "Chunks/s",
+      "throughput_unit": "Actions/s",
+      "track": "VLA_TRACK"
+    },
+    "VLA_TRACK_1A_PI05": {
+      "control_freq_hz": 20.0,
+      "description": "Gapless Real-Time Control SLA for Track 1A (pi05-3b): p99 <= 250.0 ms (>= 4.0 Chunks/s), anchored to locked K_eval=5 at 20 Hz control (5 * 50 ms = 250 ms).",
+      "efficiency_unit": "Actions/Joule",
+      "locked_k_eval": 5,
+      "max_p99_latency_ms": 250.0,
+      "min_control_rate_hz": 4.0,
+      "model_id": "pi05-3b",
+      "rate_unit": "Chunks/s",
+      "throughput_unit": "Actions/s",
+      "track": "VLA_TRACK"
+    },
+    "VLA_TRACK_1B_GR00T": {
+      "control_freq_hz": 20.0,
+      "description": "Gapless Real-Time Control SLA for Track 1B (gr00t-n1.7-3b): p99 <= 400.0 ms (>= 2.5 Chunks/s), anchored to locked K_eval=8 at 20 Hz control (8 * 50 ms = 400 ms).",
+      "efficiency_unit": "Actions/Joule",
+      "locked_k_eval": 8,
+      "max_p99_latency_ms": 400.0,
+      "min_control_rate_hz": 2.5,
+      "model_id": "gr00t-n1.7-3b",
+      "rate_unit": "Chunks/s",
+      "throughput_unit": "Actions/s",
+      "track": "VLA_TRACK"
+    },
+    "WM_TRACK": {
+      "description": "Gapless Real-Time Control SLA for Track 2 World Models (cosmos-predict2.5-2b): p99 <= 1000.0 ms (>= 1.0 Pred/s), anchored to interactive 1 Hz world-model rollouts (16 frames per prediction).",
+      "efficiency_unit": "Predictions/Joule",
+      "horizon_frames": 16,
+      "locked_k_eval": 1,
+      "max_p99_latency_ms": 1000.0,
+      "min_control_rate_hz": 1.0,
+      "model_id": "cosmos-predict2.5-2b",
+      "rate_unit": "Predictions/s",
+      "throughput_unit": "Predictions/s",
+      "track": "WM_TRACK"
+    }
+  },
+  "generated_at": "2026-10-30T12:14:30-07:00 (PDT)",
+  "grouped_frontiers": {},
+  "models": {},
+  "models_represented": [],
+  "num_certified_submissions": 0,
+  "num_discovered_receipts": 0,
+  "num_rejected_submissions": 0,
+  "num_submissions": 0,
+  "num_verified_submissions": 0,
+  "performance_cap_envelope": {
+    "description": "Practical Physical-AI Single-Chip Envelope (CAP_SINGLE_CHIP / SINGLE_CHIP_UNIFIED, num_devices==1, 100% Native Uncapped): Peak dense BF16/FP16 <= 1,000 TFLOPS (dense FP8/INT8 <= 2,000 TOPS), Native HBM/VRAM <= 64 GB, Peak Memory Bandwidth <= 2,000 GB/s (2.0 TB/s).",
+    "envelope_id": "CAP_SINGLE_CHIP",
+    "example_devices": [
+      "1x Google Cloud TPU v6e-1 Trillium (32GB HBM2e: 918 TFLOPS BF16 / 1,836 TOPS FP8/INT8 dense, 1,600 GB/s, 170W, $1.375/hr)",
+      "1x NVIDIA GeForce RTX 5090 32GB (209.5 TFLOPS BF16 FP32-accum / 419 TOPS FP8 dense, 32GB GDDR7, 1,792 GB/s, 575W, $0.95/hr)",
+      "1x NVIDIA Jetson AGX Thor 64GB (259 TFLOPS BF16 / 517.5 TOPS FP8 dense, 64GB LPDDR5X, 273 GB/s, 130W, $0.85/hr)",
+      "1x NVIDIA L40S 48GB (362.05 TFLOPS BF16 / 733 TOPS FP8 dense, 864 GB/s, 350W, $1.15/hr) / RTX 4090 24GB (82.6 TFLOPS BF16 FP32-accum / 330.3 TOPS FP8 dense, 1,008 GB/s, 450W, $0.69/hr)",
+      "1x NVIDIA L4 24GB (121 TFLOPS BF16 / 242 TOPS FP8 dense, 24GB GDDR6, 300 GB/s, 72W, $0.71/hr)",
+      "1x NVIDIA Jetson Orin NX 16GB (23 TFLOPS FP16 / 47 TOPS INT8 dense, 16GB LPDDR5, 102.4 GB/s, 25W, $0.25/hr)",
+      "Any Single-Chip GPU/TPU/NPU/ASIC natively within <=1,000 dense BF16 TFLOPS / <=2,000 FP8/INT8 TOPS, <=64GB HBM/VRAM, <=2,000 GB/s"
+    ],
+    "max_bf16_tflops": 1000.0,
+    "max_bw_gbps": 2000.0,
+    "max_fp16_tflops": 1000.0,
+    "max_fp8_int8_tops": 2000.0,
+    "max_hbm_gb": 64.0,
+    "max_int8_fp8_tops": 2000.0,
+    "max_mem_bw_gbps": 2000.0,
+    "max_num_devices": 1,
+    "max_tflops": 1000.0,
+    "max_vram_gb": 64.0,
+    "tier_alias": "SINGLE_CHIP_UNIFIED",
+    "typical_power_watts": 575.0
+  },
+  "rejected_submissions": [],
+  "schema_version": "1.0.0",
+  "season1_official_hardware_targets": {
+    "GOOGLE_CLOUD_TPU": "TPU_V6E_1_32GB",
+    "NVIDIA_GPU": "L40S_48GB"
+  },
+  "skus_represented": [],
+  "submission_protocol": {
+    "canonical_concurrency_grid": [
+      1,
+      2,
+      4,
+      8,
+      16
+    ],
+    "mode": "TWO_PHASE_COMMIT_REVEAL",
+    "phase1_contest_pr": {
+      "commitment_definition": "SHA256(canonical_reveal_manifest.json) pinning OCI image @sha256 digest, HF checkpoint shard SHA-256s, lockfile SHA-256, exact server/client CLI flags, and Phase-1 attestation_sha256",
+      "commitment_field": "recipe_commit_sha256",
+      "exposes_kernel_source_or_flags": false,
+      "required_files": [
+        "bundle_summary.json",
+        "submission_meta.json"
+      ]
+    },
+    "phase2_snapshot_reveal": {
+      "evaluation_split": "private_organizer_held_out_traces",
+      "fraud_disqualification_tolerance_pct": 8.0,
+      "max_finalists_per_lab_per_track_division": 1,
+      "open_winner_badge": "VERIFIED_OPEN_RECIPE",
+      "ranking_authority": "PHASE2_ORGANIZER_CLEAN_HARDWARE_SCORE",
+      "reproducibility_tolerance_pct": 8.0,
+      "rolling_proprietary_badge": "PROPRIETARY_AUDIT_ONLY",
+      "window_after_snapshot_hours": 24
+    },
+    "season1_official_hardware_targets": {
+      "GOOGLE_CLOUD_TPU": "TPU_V6E_1_32GB",
+      "NVIDIA_GPU": "L40S_48GB"
+    },
+    "season1_schedule": {
+      "checkpoint1_live_spotlight_freeze": "2026-11-10T23:59:00Z",
+      "checkpoint2_season1_awards_freeze": "2026-12-18T23:59:00-12:00",
+      "continuous_rolling_leaderboard": "2027+",
+      "corl_workshop_live_showcase": "2026-11-12",
+      "public_launch": "2026-10-30"
+    },
+    "submission_folder_convention": "submissions/<track>/<team>_<sku>_<engine>_<date>/"
+  },
+  "submissions": [],
+  "submissions_dir": "submissions",
+  "vendors_represented": []
+}

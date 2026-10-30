@@ -1,0 +1,129 @@
+// EmbodiedX / embodied-efficiency-bench (EEB) participant protocol v1.
+//
+// Engineering plan §2.1 ADR-1 and §5: gRPC over a Unix-domain socket (primary)
+// or TCP, with an in-process Python `Policy` ABC for development
+// (see eeb/protocol/policy.py). The wire schema is frozen early so that
+// non-Python runtimes (C++/Rust ASIC servers) can implement it directly.
+//
+// Regenerate the Python stubs with (see eeb/protocol/README.md):
+//   python -m grpc_tools.protoc -I eeb/protocol --python_out=eeb/protocol \
+//       --grpc_python_out=eeb/protocol eeb/protocol/eeb.proto
+//
+// Timestamps (`t_send`, `t_recv`, `t_done`) are Unix epoch seconds as doubles
+// (`time.time()`), taken by the client and the server respectively. They are
+// informational: the harness computes obs->action latency from a monotonic
+// client-side clock and only uses these for same-host overhead decomposition.
+
+syntax = "proto3";
+
+package eeb.v1;
+
+service EmbodiedPolicy {
+  // Static capabilities of the served policy: track, action horizon, control
+  // period, modalities, precision, model id and the server implementation tag
+  // (e.g. "SYNTHETIC_DUMMY" for the reference dummy, never for a real model).
+  rpc Capabilities(Empty) returns (Caps);
+
+  // Track 1 (VLA): one observation -> one action chunk of shape [horizon, dim].
+  rpc Predict(PredictRequest) returns (PredictResponse);
+
+  // Track 2 (world / omni model): context + action sequence -> stream of frames.
+  rpc Rollout(RolloutRequest) returns (stream Frame);
+
+  // Reset all per-session state (KV caches, action-chunk buffers, ...).
+  rpc Reset(Session) returns (Empty);
+}
+
+message Empty {}
+
+message Session {
+  string session_id = 1;
+}
+
+// A single camera image. `data` holds the raw array bytes in C order with the
+// shape (height, width, channels) and element type `dtype` (NumPy dtype name,
+// e.g. "uint8", "float32"). No compression is applied on the wire by default.
+message Image {
+  string camera = 1;
+  uint32 height = 2;
+  uint32 width = 3;
+  uint32 channels = 4;
+  string dtype = 5;
+  bytes data = 6;
+}
+
+message Caps {
+  // One of the embodied_bench.schema.TrackType values, e.g. "VLA_TRACK" or
+  // "WM_TRACK".
+  string track = 1;
+  // Number of actions per predicted chunk (T1) or frames per rollout (T2).
+  uint32 horizon = 2;
+  // Control period in milliseconds (e.g. 50.0 for 20 Hz).
+  double dt_ms = 3;
+  // Input modalities consumed, e.g. ["rgb", "proprio", "language"].
+  repeated string modalities = 4;
+  // Weight / activation precision tag, e.g. "BF16", "FP8", "W4A8".
+  string precision = 5;
+  // Model identifier, e.g. "pi05-3b" or "lerobot/pi05_libero_finetuned_v044".
+  string model_id = 6;
+  // Server implementation tag. Reference dummies MUST report
+  // "SYNTHETIC_DUMMY"; real servers report their stack, e.g.
+  // "openpi-pytorch-0.1.0". Copied verbatim into the report's
+  // execution_provenance.policy field.
+  string server_impl = 7;
+  // Action dimensionality for Track 1 (e.g. 7 for LIBERO end-effector + gripper).
+  uint32 action_dim = 8;
+  // Expected proprioception vector length (0 if unused).
+  uint32 proprio_dim = 9;
+  // Expected camera names in request order (informational).
+  repeated string cameras = 10;
+  // Expected image height / width (informational, 0 if any).
+  uint32 image_height = 11;
+  uint32 image_width = 12;
+  // Locked execution horizon K (actions executed per chunk before replanning; 0 = horizon).
+  uint32 execute_horizon = 13;
+}
+
+message PredictRequest {
+  string session_id = 1;
+  uint32 step = 2;
+  repeated Image images = 3;
+  // Little-endian float32 proprioception vector (robot state).
+  bytes proprio_f32 = 4;
+  string instruction = 5;
+  // Client wall-clock send time (Unix seconds, time.time()).
+  double t_send = 6;
+}
+
+message PredictResponse {
+  // Little-endian float32 action chunk, C-order with shape [horizon, dim].
+  bytes actions_f32 = 1;
+  uint32 horizon = 2;
+  uint32 dim = 3;
+  // Server wall-clock time when the request entered the servicer.
+  double t_recv = 4;
+  // Server wall-clock time when the policy finished producing actions.
+  double t_done = 5;
+}
+
+message RolloutRequest {
+  string session_id = 1;
+  // Conditioning frames (most recent last).
+  repeated Image context_frames = 2;
+  bytes proprio_f32 = 3;
+  string instruction = 4;
+  // Little-endian float32 action sequence, C-order with shape [horizon, dim].
+  bytes actions_f32 = 5;
+  uint32 horizon = 6;
+  uint32 dim = 7;
+  // Number of frames requested (0 = server default / caps.horizon).
+  uint32 num_frames = 8;
+  double t_send = 9;
+}
+
+message Frame {
+  uint32 index = 1;
+  Image image = 2;
+  // Server wall-clock time when this frame was ready.
+  double t_done = 3;
+}

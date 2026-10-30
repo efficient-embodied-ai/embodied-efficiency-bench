@@ -1,0 +1,32 @@
+# EmbodiedX v1.0 Single-Chip AMD ROCm Container (CAP_SINGLE_CHIP: num_devices == 1)
+# Supported SKUs: AMD_MI210_64GB, AMD_W7900_48GB, AMD_RX_7900_XTX_24GB, AMD_MI250_1GCD_64GB
+FROM rocm/pytorch:rocm6.2.4_ubuntu22.04_py3.10_pytorch_release_2.4.0
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    ROCR_VISIBLE_DEVICES=0 \
+    HIP_VISIBLE_DEVICES=0 \
+    EEB_MAX_DEVICES=1 \
+    EEB_PERF_CAP=CAP_SINGLE_CHIP \
+    EEB_VENDOR=AMD_ROCM
+
+WORKDIR /workspace/embodied-efficiency-bench
+COPY pyproject.toml README.md CONTRIBUTING.md ./
+COPY eeb/ ./eeb/
+COPY embodied_bench/ ./embodied_bench/
+COPY runners/ ./runners/
+COPY recipes/ ./recipes/
+COPY leaderboard/ ./leaderboard/
+
+RUN pip install --no-cache-dir --upgrade pip pyyaml numpy && \
+    pip install --no-cache-dir -e . && \
+    (id -u eeb >/dev/null 2>&1 || useradd -m -u 10001 -s /bin/bash eeb) && \
+    chown -R eeb:eeb /workspace/embodied-efficiency-bench
+
+USER eeb
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).read()"
+
+ENTRYPOINT ["python3", "-m", "runners.base_server"]
+CMD ["--model-id", "lerobot/pi05_libero_finetuned_v044", "--hardware-sku", "AMD_MI210_64GB", "--precision", "BF16", "--num-devices", "1", "--self-test"]

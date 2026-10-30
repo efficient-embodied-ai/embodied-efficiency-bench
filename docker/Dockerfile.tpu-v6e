@@ -1,0 +1,56 @@
+# EmbodiedX (`embodied-efficiency-bench` v1.0) - Google Cloud TPU v6e-1 (32GB HBM2e, 1-Chip) Container
+# Enforces single-chip native uncapped execution (`TPU_VISIBLE_DEVICES=0`, `TPU_CHIPS_PER_HOST_BOUNDS=1,1,1`)
+# under `CAP_SINGLE_CHIP` (`num_devices == 1`). Default TPU runtime: open-source TorchTPU (`torch_tpu`).
+
+FROM python:3.11-slim
+
+LABEL maintainer="EmbodiedX / CoRL 2026 Efficient Embodied AI Organizers"
+LABEL description="Google Cloud TPU v6e-1 Trillium (32GB HBM2e, 1-Chip) TorchTPU (torch_tpu + torch.compile + Pallas) and optional JAX/Flax runtime for EmbodiedX"
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PJRT_DEVICE=TPU \
+    TPU_VISIBLE_DEVICES=0 \
+    TPU_CHIPS_PER_HOST_BOUNDS=1,1,1 \
+    TPU_HOST_BOUNDS=1,1,1 \
+    XLA_PYTHON_CLIENT_PREALLOCATE=true
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    ca-certificates \
+    curl \
+    git \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install TorchTPU (default PyTorch TPU backend) + optional JAX/Pallas for single-chip Cloud TPU v6e-1
+RUN pip install --upgrade pip setuptools wheel && \
+    pip install \
+      numpy>=1.26.0 \
+      pyyaml>=6.0 \
+      pytest>=8.0.0 \
+      torch \
+      torch_tpu \
+      jax[tpu]>=0.4.35 \
+      -f https://storage.googleapis.com/jax-releases/libtpu_releases.html
+
+WORKDIR /workspace/embodied-efficiency-bench
+COPY pyproject.toml README.md CONTRIBUTING.md ./
+COPY eeb/ ./eeb/
+COPY embodied_bench/ ./embodied_bench/
+COPY runners/ ./runners/
+COPY recipes/ ./recipes/
+COPY leaderboard/ ./leaderboard/
+COPY data/ ./data/
+
+RUN pip install -e ".[grpc,tpu]" && \
+    (id -u eeb >/dev/null 2>&1 || useradd -m -u 10001 -s /bin/bash eeb) && \
+    chown -R eeb:eeb /workspace/embodied-efficiency-bench
+
+USER eeb
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python3 -c "import eeb, embodied_bench; assert eeb.__file__ and embodied_bench.__file__"
+
+ENTRYPOINT ["python3", "-m", "embodied_bench.cli"]
+CMD ["measure", "--recipe", "recipes/track1_vla_pi05_tpu_v6e.yaml", "--output", "/tmp/tpu_v6e_pi05_report.json"]
