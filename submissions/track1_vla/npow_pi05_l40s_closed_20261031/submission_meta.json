@@ -1,10 +1,10 @@
 {
   "division": "CLOSED",
-  "engine_tag": "orchestral-openpi-jax",
+  "engine_tag": "openpi-jax",
   "hardware_sku": "L40S_48GB",
   "phase1_source_attestation_sha256": "01276a9faa96c6738c82a0f6fb3f330912e0f19370cc648ad278908bb9ded111",
   "recipe_commit_sha256": "1ce1f410e401bb90ae831ff6d7bd7da8775fe57f0ef6beb493047b38fbacde8d",
   "schema_version": "1.0.0",
   "submission_phase": "COMMIT_ONLY",
-  "team": "orchestral-labs"
+  "team": "npow"
 }
