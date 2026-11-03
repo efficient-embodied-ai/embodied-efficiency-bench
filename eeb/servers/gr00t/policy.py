@@ -292,7 +292,7 @@ class Gr00tN17Policy(BasePolicy):
       obs_image_hw: Tuple[int, int] = (256, 256),
       image_hw: Optional[Sequence[int]] = None,
       torch_compile: bool = False,
-      enable_batching: bool = True,
+      enable_batching: bool = False,
       batch_buckets: Sequence[int] = (1, 2, 4, 8, 16),
       micro_batch_size: int = 16,
       batch_window_ms: float = 8.0,

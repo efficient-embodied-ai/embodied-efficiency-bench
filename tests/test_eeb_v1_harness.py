@@ -3,6 +3,7 @@
   * Track 2 (`WM_TRACK`) `rollout(ctx, actions)` sweep, sanity gate, golden replay gate, and report normalizations
   * `TraceBundleObservationSource` (`eeb measure --traces <bundle_dir>`)
   * Default `division == "CLOSED"` and `executed_actions_per_sec` / `frames_per_sec` normalization
+  * `Gr00tN17Policy` default serving: concurrent requests run as B=1 calls (batching is opt-in)
 """
 
 from __future__ import annotations
@@ -1445,3 +1446,109 @@ def test_torchtpu_crash_repeat_and_concurrent_paths(monkeypatch: pytest.MonkeyPa
 
 
 
+
+
+def test_gr00t_default_serves_concurrent_requests_as_b1_calls(monkeypatch: pytest.MonkeyPatch) -> None:
+  """Golden parity at C >= 2: the reference must serve every request as the B=1 call the golden was generated with.
+
+  The batched bf16 call is not batch-invariant (cuBLAS picks GEMM tiling from the row count), and the near
+  step-function gripper dimension turns those last-bit differences into whole-chunk flips on a few golden
+  samples, so a batching-on reference fails its own golden replay at C >= 2. Batching stays available as an
+  explicit opt-in (`enable_batching=True`), checked here as the positive control.
+  """
+  import inspect
+  import sys
+  import threading
+  import time
+  import types
+
+  from eeb.protocol.policy import Observation
+  from eeb.servers.gr00t.policy import Gr00tN17Policy
+
+  assert inspect.signature(Gr00tN17Policy.__init__).parameters["enable_batching"].default is False
+
+  torch_mod, torchtpu_mod, _, _ = _make_mock_torch_and_torchtpu(
+      cuda_available=False, tpu_available=True, tpu_device_count=1
+  )
+  monkeypatch.setitem(sys.modules, "torch", torch_mod)
+  monkeypatch.setitem(sys.modules, "torch_tpu", torchtpu_mod)
+  gr00t_dc = types.ModuleType("gr00t.experiment.data_config")
+  gr00t_dc.DATA_CONFIG_MAP = {}
+  gr00t_pol_mod = types.ModuleType("gr00t.model.policy")
+
+  class _FakeGr00tPolicy:
+    def __init__(self, **kwargs) -> None:
+      self.kwargs = kwargs
+
+    def get_action(self, example):
+      time.sleep(0.02)
+      return {"action": np.ones((1, 16, 7), dtype=np.float32)}
+
+  gr00t_pol_mod.Gr00tPolicy = _FakeGr00tPolicy
+  for name, mod in (
+      ("gr00t", types.ModuleType("gr00t")),
+      ("gr00t.experiment", types.ModuleType("gr00t.experiment")),
+      ("gr00t.experiment.data_config", gr00t_dc),
+      ("gr00t.model", types.ModuleType("gr00t.model")),
+      ("gr00t.model.policy", gr00t_pol_mod),
+  ):
+    monkeypatch.setitem(sys.modules, name, mod)
+
+  batch_sizes: list[int] = []
+  sizes_lock = threading.Lock()
+  dispatch = Gr00tN17Policy._infer_batch_dispatch
+
+  def _recording_dispatch(self, items):
+    with sizes_lock:
+      batch_sizes.append(len(items))
+    return dispatch(self, items)
+
+  monkeypatch.setattr(Gr00tN17Policy, "_infer_batch_dispatch", _recording_dispatch)
+
+  def _serve_concurrently(policy: Gr00tN17Policy, concurrency: int) -> None:
+    barrier = threading.Barrier(concurrency)
+    errors: list[BaseException] = []
+
+    def _client(slot: int) -> None:
+      try:
+        policy.reset(f"session-{slot}")
+        barrier.wait()
+        for step in range(4):
+          obs = Observation(
+              session_id=f"session-{slot}",
+              step=step,
+              images={
+                  "agentview": np.zeros((256, 256, 3), dtype=np.uint8),
+                  "wrist": np.zeros((256, 256, 3), dtype=np.uint8),
+              },
+              proprio=np.zeros((8,), dtype=np.float32),
+              instruction="pick block",
+          )
+          assert policy.predict(obs).actions.shape == (16, 7)
+      except BaseException as exc:  # surfaced in the main thread below
+        errors.append(exc)
+
+    threads = [threading.Thread(target=_client, args=(slot,)) for slot in range(concurrency)]
+    for thread in threads:
+      thread.start()
+    for thread in threads:
+      thread.join(timeout=30)
+    assert not errors, errors
+
+  # 1. Default settings: no micro-batcher, and every one of C=8 x 4 concurrent requests is its own B=1 call.
+  default_pol = Gr00tN17Policy(model_path="nvidia/GR00T-N1.7-3B", device="tpu", warm_start=False)
+  assert default_pol.enable_batching is False
+  assert default_pol._batcher is None
+  _serve_concurrently(default_pol, concurrency=8)
+  assert batch_sizes == [1] * 32
+
+  # 2. Positive control: the opt-in batcher coalesces the same concurrent load into B > 1 calls.
+  batch_sizes.clear()
+  batched_pol = Gr00tN17Policy(model_path="nvidia/GR00T-N1.7-3B", device="tpu", enable_batching=True, warm_start=False)
+  try:
+    assert batched_pol._batcher is not None
+    _serve_concurrently(batched_pol, concurrency=8)
+  finally:
+    batched_pol.close()
+  assert sum(batch_sizes) == 32
+  assert max(batch_sizes) > 1
