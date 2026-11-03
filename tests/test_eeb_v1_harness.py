@@ -1449,7 +1449,7 @@ def test_torchtpu_crash_repeat_and_concurrent_paths(monkeypatch: pytest.MonkeyPa
 
 
 def test_pi05_lerobot_compat_across_releases_and_string_dtype(monkeypatch: pytest.MonkeyPatch) -> None:
-  """Gate 4: pi0.5 PyTorch server helpers resolve each lerobot release's API, and `PI05Config.dtype` stays a string.
+  """pi0.5 PyTorch server helpers resolve each lerobot release's API, and `PI05Config.dtype` stays a string.
 
   v0.4.4 - v0.6.0: helpers in `modeling_pi05` (`clone_past_key_values` only from v0.6.0), and
   `_prepare_attention_masks_4d(att_2d)` takes no dtype.
