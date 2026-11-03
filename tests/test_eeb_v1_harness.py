@@ -1533,6 +1533,7 @@ def test_gr00t_default_serves_concurrent_requests_as_b1_calls(monkeypatch: pytes
       thread.start()
     for thread in threads:
       thread.join(timeout=30)
+      assert not thread.is_alive(), "client thread did not finish within 30 s"
     assert not errors, errors
 
   # 1. Default settings: no micro-batcher, and every one of C=8 x 4 concurrent requests is its own B=1 call.
