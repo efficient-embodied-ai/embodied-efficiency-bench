@@ -270,9 +270,11 @@ class Pi05Policy(BasePolicy):
             rev_kw["revision"] = self.revision
         except (TypeError, ValueError):
           pass
-      cfg = PI05Config.from_pretrained(self.checkpoint_dir, **rev_kw)
+      from eeb.servers.pi05.lerobot_compat import config_dtype, load_config
+
+      cfg = load_config(PI05Config, self.checkpoint_dir, **rev_kw)
       cfg.device = self.device
-      cfg.dtype = target_dtype
+      cfg.dtype = config_dtype(cfg, target_dtype)
       cfg.chunk_size = int(self._requested_horizon)
       cfg.n_action_steps = int(self._requested_horizon)
       cfg.num_inference_steps = self.num_inference_steps
@@ -459,7 +461,7 @@ class Pi05Policy(BasePolicy):
 
   def _infer_lerobot_batch(self, examples: Sequence[Dict[str, Any]]) -> Sequence[np.ndarray]:
     import torch
-    from lerobot.policies.pi05.modeling_pi05 import clone_past_key_values, make_att_2d_masks
+    from eeb.servers.pi05.lerobot_compat import attention_mask_4d, clone_past_key_values, make_att_2d_masks
     from lerobot.utils.constants import OBS_LANGUAGE_ATTENTION_MASK, OBS_LANGUAGE_TOKENS
 
     orig_n = len(examples)
@@ -515,7 +517,7 @@ class Pi05Policy(BasePolicy):
       prefix_embs, prefix_pad_masks, prefix_att_masks = m.embed_prefix(images, img_masks, tokens, masks)
       prefix_att_2d = make_att_2d_masks(prefix_pad_masks, prefix_att_masks)
       prefix_pos = torch.cumsum(prefix_pad_masks, dim=1) - 1
-      att_4d = m._prepare_attention_masks_4d(prefix_att_2d, dtype=prefix_embs.dtype)
+      att_4d = attention_mask_4d(m, prefix_att_2d, prefix_embs.dtype)
 
       _, past_key_values = pge.forward(
           attention_mask=att_4d,
@@ -538,7 +540,7 @@ class Pi05Policy(BasePolicy):
         suffix_att_2d = make_att_2d_masks(suffix_pad_masks, suffix_att_masks)
         prefix_pad_2d = prefix_pad_masks[:, None, :].expand(bsize, action_len, prefix_kv_len)
         full_att_2d = torch.cat([prefix_pad_2d, suffix_att_2d], dim=2)
-        full_att_4d = m._prepare_attention_masks_4d(full_att_2d, dtype=prefix_embs.dtype)
+        full_att_4d = attention_mask_4d(m, full_att_2d, prefix_embs.dtype)
         prefix_offsets = torch.sum(prefix_pad_masks, dim=-1)[:, None]
         suffix_pos = prefix_offsets + torch.cumsum(suffix_pad_masks, dim=1) - 1
 
@@ -567,7 +569,7 @@ class Pi05Policy(BasePolicy):
           full_att_2d = torch.cat([prefix_pad_2d, suffix_att_2d], dim=2)
           prefix_offsets = torch.sum(prefix_pad_masks, dim=-1)[:, None]
           suffix_pos = prefix_offsets + torch.cumsum(suffix_pad_masks, dim=1) - 1
-          full_att_4d = m._prepare_attention_masks_4d(full_att_2d, dtype=prefix_embs.dtype)
+          full_att_4d = attention_mask_4d(m, full_att_2d, prefix_embs.dtype)
           kv_step = clone_past_key_values(past_key_values)
           (_, suffix_out), _ = pge.forward(
               attention_mask=full_att_4d,
