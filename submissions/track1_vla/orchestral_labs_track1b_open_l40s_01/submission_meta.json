@@ -1,0 +1,10 @@
+{
+  "division": "OPEN",
+  "engine_tag": null,
+  "hardware_sku": "L40S_48GB",
+  "phase1_source_attestation_sha256": "4d75ee13cc6f619a5eb8ad3feb69e1e5465a8adb7d9a38c34cda3a80c93568e5",
+  "recipe_commit_sha256": "655cb50ae9dbb3559fcdef313f22e9514feb7c52afbce336cdbd4be1abb91c14",
+  "schema_version": "1.0.0",
+  "submission_phase": "COMMIT_ONLY",
+  "team": null
+}
