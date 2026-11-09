@@ -3,6 +3,7 @@
   * Track 2 (`WM_TRACK`) `rollout(ctx, actions)` sweep, sanity gate, golden replay gate, and report normalizations
   * `TraceBundleObservationSource` (`eeb measure --traces <bundle_dir>`)
   * Default `division == "CLOSED"` and `executed_actions_per_sec` / `frames_per_sec` normalization
+  * `eeb.servers.pi05.lerobot_compat`: the pi0.5 PyTorch server across lerobot v0.4.4 - v0.6.1 APIs
 """
 
 from __future__ import annotations
@@ -1445,3 +1446,95 @@ def test_torchtpu_crash_repeat_and_concurrent_paths(monkeypatch: pytest.MonkeyPa
 
 
 
+
+
+def test_pi05_lerobot_compat_across_releases_and_string_dtype(monkeypatch: pytest.MonkeyPatch) -> None:
+  """pi0.5 PyTorch server helpers resolve each lerobot release's API, and `PI05Config.dtype` stays a string.
+
+  v0.4.4 - v0.6.0: helpers in `modeling_pi05` (`clone_past_key_values` only from v0.6.0), and
+  `_prepare_attention_masks_4d(att_2d)` takes no dtype.
+  v0.6.1: helpers moved to `common.vla_utils`, model method replaced by `prepare_attention_masks_4d(att_2d, dtype=...)`.
+  Negative control: a torch dtype in the string-typed `config.dtype` matches neither of lerobot's
+  `precision == "bfloat16"` / `== "float32"` branches.
+  """
+  import sys
+  import types
+
+  from eeb.servers.pi05 import lerobot_compat
+
+  modeling = "lerobot.policies.pi05.modeling_pi05"
+  vla_utils = "lerobot.policies.common.vla_utils"
+  for name in (modeling, vla_utils):
+    monkeypatch.setitem(sys.modules, name, types.ModuleType(name))
+
+  # 1. Nothing installed: clone falls back to a deep copy; make_att_2d_masks and the 4D mask fail loudly.
+  cache = {"k": [1, 2]}
+  cloned = lerobot_compat.clone_past_key_values(cache)
+  assert cloned == cache and cloned is not cache and cloned["k"] is not cache["k"]
+  with pytest.raises(ImportError, match="make_att_2d_masks"):
+    lerobot_compat.make_att_2d_masks("pad", "att")
+  with pytest.raises(ImportError, match="prepare_attention_masks_4d"):
+    lerobot_compat.attention_mask_4d(types.SimpleNamespace(), "att", "bfloat16")
+
+  # 2. v0.6.1 layout: helpers in common.vla_utils, module-level 4D mask helper taking dtype.
+  monkeypatch.setattr(sys.modules[vla_utils], "clone_past_key_values", lambda kv: ("vla_utils", kv), raising=False)
+  monkeypatch.setattr(sys.modules[vla_utils], "make_att_2d_masks", lambda pad, att: (pad, att), raising=False)
+  monkeypatch.setattr(
+      sys.modules[vla_utils], "prepare_attention_masks_4d", lambda att, dtype=None: ("helper", att, dtype), raising=False
+  )
+  assert lerobot_compat.clone_past_key_values("kv") == ("vla_utils", "kv")
+  assert lerobot_compat.make_att_2d_masks("pad", "att") == ("pad", "att")
+  assert lerobot_compat.attention_mask_4d(types.SimpleNamespace(), "att", "bfloat16") == ("helper", "att", "bfloat16")
+
+  # 3. v0.4.4 - v0.6.0 layout: modeling_pi05 wins over vla_utils; the model method without dtype is cast.
+  monkeypatch.setattr(sys.modules[modeling], "clone_past_key_values", lambda kv: ("modeling", kv), raising=False)
+  assert lerobot_compat.clone_past_key_values("kv") == ("modeling", "kv")
+
+  class _Mask:
+    def __init__(self, dtype: str) -> None:
+      self.dtype = dtype
+
+    def to(self, dtype: str) -> _Mask:
+      return _Mask(dtype)
+
+  no_dtype_model = types.SimpleNamespace(_prepare_attention_masks_4d=lambda att: _Mask("float32"))
+  assert lerobot_compat.attention_mask_4d(no_dtype_model, "att", "bfloat16").dtype == "bfloat16"
+  dtype_model = types.SimpleNamespace(_prepare_attention_masks_4d=lambda att, dtype=None: ("method", dtype))
+  assert lerobot_compat.attention_mask_4d(dtype_model, "att", "bfloat16") == ("method", "bfloat16")
+
+  # 4. String dtype: lerobot declares `PI05Config.dtype` as "bfloat16" | "float32".
+  class _TorchDtype:
+    def __str__(self) -> str:
+      return "torch.bfloat16"
+
+  torch_bf16 = _TorchDtype()
+  string_cfg = types.SimpleNamespace(dtype="float32")
+  assert lerobot_compat.config_dtype(string_cfg, torch_bf16) == "bfloat16"
+  assert torch_bf16 != "bfloat16"  # negative control: the old assignment matches no lerobot precision branch
+  assert lerobot_compat.config_dtype(types.SimpleNamespace(dtype=object()), torch_bf16) is torch_bf16
+
+  # 5. Config loader: concrete subclasses reject the checkpoint's `type` key in some releases.
+  class _BaseConfig:
+    @classmethod
+    def from_pretrained(cls, checkpoint: str, **kwargs):
+      return _Pi05Config(checkpoint, kwargs)
+
+  class _Pi05Config(_BaseConfig):
+    def __init__(self, checkpoint: str, kwargs: dict) -> None:
+      self.checkpoint, self.kwargs = checkpoint, kwargs
+
+    @classmethod
+    def from_pretrained(cls, checkpoint: str, **kwargs):
+      raise ValueError("The fields `type` are not valid for PI05Config")
+
+  class _OtherConfig:
+    pass
+
+  configs = types.ModuleType("lerobot.configs")
+  configs.PreTrainedConfig = _BaseConfig
+  monkeypatch.setitem(sys.modules, "lerobot.configs", configs)
+  monkeypatch.delitem(sys.modules, "lerobot.configs.policies", raising=False)
+  loaded = lerobot_compat.load_config(_Pi05Config, "ckpt", revision="r1")
+  assert isinstance(loaded, _Pi05Config) and loaded.checkpoint == "ckpt" and loaded.kwargs == {"revision": "r1"}
+  with pytest.raises(ValueError, match="not valid for PI05Config"):
+    lerobot_compat.load_config(type("_Wrong", (_OtherConfig,), {"from_pretrained": _Pi05Config.from_pretrained}), "ckpt")
