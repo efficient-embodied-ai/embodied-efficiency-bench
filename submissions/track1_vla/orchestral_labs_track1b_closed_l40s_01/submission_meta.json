@@ -1,0 +1,10 @@
+{
+  "division": "CLOSED",
+  "engine_tag": null,
+  "hardware_sku": "L40S_48GB",
+  "phase1_source_attestation_sha256": "c0630fa698d7352229617d31a08a1bd837e2b51722c896524d292b9dab9a2355",
+  "recipe_commit_sha256": "d4c52ade1b474cc09e068ec8b01ce87bec181ff5e35aa784b18dec21ba427878",
+  "schema_version": "1.0.0",
+  "submission_phase": "COMMIT_ONLY",
+  "team": "orchestral_labs"
+}
